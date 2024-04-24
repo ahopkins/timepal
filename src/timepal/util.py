@@ -1,11 +1,12 @@
-from datetime import datetime, time, date, timedelta
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
-from rich.console import Console
-from rich.columns import Columns
-from rich.table import Table
-from time import sleep
 import sys
+from datetime import date, datetime, time, timedelta
+from time import sleep
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
 import pytz
+from rich.columns import Columns
+from rich.console import Console
+from rich.table import Table
 
 console = Console()
 
@@ -22,11 +23,18 @@ HIGHLIGHT = "Asia/Jerusalem"
 INCREMENT = timedelta(seconds=1)
 
 
+def _get_shorthand_timezone(tz: str) -> str | None:
+    for shorthand, full in SHORTHAND_TIMEZONES.items():
+        if tz.lower() == shorthand.lower():
+            return full
+    return None
+
+
 def convert_to_aware_datetime(
     time_raw: str | time, date_raw: str | date, timezone_str: str
 ) -> datetime:
-    if timezone_str in SHORTHAND_TIMEZONES:
-        timezone_str = SHORTHAND_TIMEZONES[timezone_str]
+    if short_timezone := _get_shorthand_timezone(timezone_str):
+        timezone_str = short_timezone
     elif (offset_str := timezone_str.strip("+-")).isnumeric():
         as_int = int("-" + offset_str if timezone_str.startswith("-") else offset_str)
         if as_int < -12 or as_int > 12:

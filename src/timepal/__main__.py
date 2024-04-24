@@ -1,13 +1,10 @@
 import argparse
-from sys import argv
 from datetime import datetime, timezone
+from sys import argv
 from zoneinfo import ZoneInfo
-from timepal.util import (
-    convert_to_aware_datetime,
-    display_datetime,
-    goodbye,
-    display_timezones,
-)
+
+from timepal.util import (convert_to_aware_datetime, display_datetime,
+                          display_timezones, goodbye)
 
 DEFAULT_TIMEZONE = "Asia/Jerusalem"
 
