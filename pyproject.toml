@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "timepal"
+version = "0.1.0"
+description = "Adam's Productivity CLI"
+authors = [{name = "Adam Hopkins"}]
+readme = "README.md"
+requires-python = ">=3.11"
+
+[project.scripts]
+timepal = "timepal.__main__:main"
+t = "timepal.__main__:main"
