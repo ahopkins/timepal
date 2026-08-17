@@ -115,9 +115,15 @@ def convert_to_aware_datetime(
     return datetime.combine(date_raw, time_raw).replace(tzinfo=tzinfo)
 
 
-def _frame(dt: datetime, input_date: date) -> Group:
-    """One rendered snapshot of the clock."""
+def _frame(dt: datetime) -> Group:
+    """One rendered snapshot of the clock.
+
+    The reference date is read off `dt` every frame rather than captured once,
+    so a continuous clock rolls over at midnight instead of holding yesterday
+    and marking every row +1.
+    """
     config = get_config()
+    input_date = dt.date()
 
     input_info = [
         ("Date", input_date.isoformat()),
@@ -155,10 +161,9 @@ def _frame(dt: datetime, input_date: date) -> Group:
 
 def display_datetime(dt: datetime, continuous: bool) -> None:
     console = Console()
-    input_date = dt.date()
 
     if not continuous:
-        console.print(_frame(dt, input_date))
+        console.print(_frame(dt))
         return
 
     increment = get_config().increment
@@ -167,7 +172,7 @@ def display_datetime(dt: datetime, continuous: bool) -> None:
     # reprinting -- what this used to do -- leaves the terminal blank for the
     # gap between the two, which is the flicker.
     with Live(
-        _frame(dt, input_date),
+        _frame(dt),
         console=console,
         auto_refresh=False,
         transient=False,
@@ -175,7 +180,7 @@ def display_datetime(dt: datetime, continuous: bool) -> None:
         while True:
             sleep(increment.total_seconds())
             dt += increment
-            live.update(_frame(dt, input_date), refresh=True)
+            live.update(_frame(dt), refresh=True)
 
 
 def display_timezones(q: str | None = None) -> None:
