@@ -9,6 +9,10 @@ description = "Adam's Productivity CLI"
 authors = [{name = "Adam Hopkins"}]
 readme = "README.md"
 requires-python = ">=3.11"
+dependencies = [
+    "rich",
+    "pytz",
+]
 
 [project.scripts]
 timepal = "timepal.__main__:main"
