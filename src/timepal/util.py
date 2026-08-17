@@ -6,8 +6,10 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import pytz
 from rich.columns import Columns
-from rich.console import Console
+from rich.console import Console, Group
+from rich.live import Live
 from rich.table import Table
+from rich.text import Text
 
 from timepal.config import get_config
 
@@ -113,57 +115,67 @@ def convert_to_aware_datetime(
     return datetime.combine(date_raw, time_raw).replace(tzinfo=tzinfo)
 
 
+def _frame(dt: datetime, input_date: date) -> Group:
+    """One rendered snapshot of the clock."""
+    config = get_config()
+
+    input_info = [
+        ("Date", input_date.isoformat()),
+        ("Time", dt.strftime("%H:%M:%S")),
+        ("Timezone", str(dt.tzinfo)),
+    ]
+    heading = [
+        Text.from_markup(f"{label}: [bold yellow]{value}[/]") for label, value in input_info
+    ]
+
+    table = Table(show_header=True, header_style="bold magenta")
+    table.add_column("Timezone")
+    table.add_column("Local Time", style="yellow")
+
+    for name, tz in config.timezones.items():
+        date_indicator = ""
+        current_indicator = ""
+        local_dt = dt.astimezone(ZoneInfo(tz))
+        date_diff = (local_dt.date() - input_date).days
+        if date_diff != 0:
+            date_indicator = f"{date_diff:+d}"
+        row_style = "bold green" if tz == config.highlight else ""
+        if date_indicator:
+            date_indicator = f" [bold cyan]{date_indicator}[/]"
+        if tz == str(dt.tzinfo):
+            current_indicator = " 👈"
+        table.add_row(
+            f"{name}{current_indicator}",
+            f"{local_dt.strftime('%H:%M')}{date_indicator}",
+            style=row_style,
+        )
+
+    return Group(Text(""), *heading, Text(""), table)
+
+
 def display_datetime(dt: datetime, continuous: bool) -> None:
     console = Console()
-    config = get_config()
     input_date = dt.date()
 
-    while True:
-        if continuous:
-            console.clear()
-        output = ["\n"]
+    if not continuous:
+        console.print(_frame(dt, input_date))
+        return
 
-        input_info = [
-            ("Date", input_date.isoformat()),
-            ("Time", dt.strftime("%H:%M:%S")),
-            ("Timezone", str(dt.tzinfo)),
-        ]
+    increment = get_config().increment
 
-        for label, value in input_info:
-            output.append(f"{label}: [bold yellow]{value}[/]\n")
-
-        output.append("\n")
-
-        table = Table(show_header=True, header_style="bold magenta")
-        table.add_column("Timezone")
-        table.add_column("Local Time", style="yellow")
-
-        for name, tz in config.timezones.items():
-            date_indicator = ""
-            current_indicator = ""
-            local_dt = dt.astimezone(ZoneInfo(tz))
-            date_diff = (local_dt.date() - input_date).days
-            if date_diff != 0:
-                date_indicator = f"{date_diff:+d}"
-            row_style = "bold green" if tz == config.highlight else ""
-            if date_indicator:
-                date_indicator = f" [bold cyan]{date_indicator}[/]"
-            if tz == str(dt.tzinfo):
-                current_indicator = " 👈"
-            table.add_row(
-                f"{name}{current_indicator}",
-                f"{local_dt.strftime('%H:%M')}{date_indicator}",
-                style=row_style,
-            )
-
-        output.append(table)
-
-        console.print(*output, end="\r")
-        if continuous:
-            dt += config.increment
-            sleep(config.increment.total_seconds())
-        else:
-            break
+    # Live overwrites the previous frame in place. Clearing the screen and
+    # reprinting -- what this used to do -- leaves the terminal blank for the
+    # gap between the two, which is the flicker.
+    with Live(
+        _frame(dt, input_date),
+        console=console,
+        auto_refresh=False,
+        transient=False,
+    ) as live:
+        while True:
+            sleep(increment.total_seconds())
+            dt += increment
+            live.update(_frame(dt, input_date), refresh=True)
 
 
 def display_timezones(q: str | None = None) -> None:
